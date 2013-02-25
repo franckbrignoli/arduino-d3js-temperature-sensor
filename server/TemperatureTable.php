@@ -15,13 +15,20 @@ class TemperatureTable
 	public static function getTodayReport($interval)
 	{
 		$query = "SELECT AVG(temperature) as temperature, CONCAT(LPAD(HOUR(`reported_at`), 2, '0'),':', LPAD((MINUTE(`reported_at`) DIV ".$interval." * ".$interval."), 2, '0'),':00') as reported_at FROM temperature WHERE DATE(`reported_at`) = CURDATE() GROUP BY HOUR(`reported_at`), MINUTE(`reported_at`) DIV ".$interval." ORDER BY reported_at ";
-
-		return self::getConnection()->query($query);
+		$res = self::getConnection()->query($query, PDO::FETCH_ASSOC);
+		return $res->fetchAll(PDO::FETCH_ASSOC);
 	}
 
 	public static function getTodayAverage()
 	{
 		$query = "SELECT AVG(temperature) as temperature FROM temperature WHERE DATE(`reported_at`) = CURDATE()";
+
+		return self::getConnection()->query($query);
+	}
+
+	public static function getAverageReport($interval)
+	{
+		$query = "SELECT AVG(temperature) as temperature, CONCAT(LPAD(HOUR(`reported_at`), 2, '0'),':', LPAD((MINUTE(`reported_at`) DIV ".$interval." * ".$interval."), 2, '0'),':00') as reported_at FROM temperature GROUP BY HOUR(`reported_at`), MINUTE(`reported_at`) DIV ".$interval." ORDER BY reported_at ";
 
 		return self::getConnection()->query($query);
 	}

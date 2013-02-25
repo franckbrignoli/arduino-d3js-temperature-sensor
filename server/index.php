@@ -13,7 +13,7 @@ body {
   shape-rendering: crispEdges;
 }
 
-.line {
+#report {
   fill: none;
   stroke: steelblue;
   stroke-width: 2.5px;
@@ -56,20 +56,11 @@ circle:hover {
 </head>
 <body>
 	<div id="info"></div>
-	<script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+	<script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
 	<script type="text/javascript">
 	<?php
 
 	require('TemperatureTable.php');	
-
-	echo "var dataset = [";
-	$rows = TemperatureTable::getTodayReport(15);
-
-	foreach ($rows as $row) 
-	{
-		echo "{ date : '".$row['reported_at']."', temperature : '".$row['temperature']."' },";
-	}
-	echo "];";
 
 	foreach (TemperatureTable::getTodayAverage() as $row) 
 	{
@@ -86,7 +77,7 @@ circle:hover {
 			.style('display', 'block')
 			.style('left', (coord[0] + margin.left) + 'px')
 			.style('top', (coord[1] + margin.top - 20) + 'px')
-			.html(d.date + ' '+(Math.round(d.temperature*10) / 10)+'°C');
+			.html(d.reported_at + ' '+(Math.round(d.temperature*10) / 10)+'°C');
 	}
 
 	function hideInfo()
@@ -95,9 +86,46 @@ circle:hover {
 			.style('display', 'none');
 	}
 
-	var margin = { top: 40, right: 40, bottom: 40, left: 40 };
-	var width = 960 - margin.left - margin.right,
-		height = 400 - margin.top - margin.bottom;
+	function refresh(data)
+	{
+		var circle = svg.selectAll('circle')
+						.data(data);
+
+		circle.enter()
+			.append('circle')
+			.attr('cx', function(d) { return x(parse_time(d.reported_at)); })
+			.attr('cy', function(d) { return y(d.temperature); })
+			.attr('r', '3')
+			.on('mouseover', function(d) {
+				displayInfo(this, d);	
+			})
+			.on('mouseout', function(d) { 
+				hideInfo();
+			});
+
+		circle.transition()
+			.duration(1000)
+			.attr('cy', function(d) { return y(d.temperature); })
+	
+		
+		svg.select("#report")	
+			.data([data])
+			.transition()
+			.duration(1000)
+			.attr("d", line);
+						
+	}
+
+	d3.json('report.php', function(err, obj) {
+		refresh(obj);
+	});
+
+	var margin = { top: 40, right: 40, bottom: 40, left: 40 },
+		width = 1180 - margin.left - margin.right,
+		height = 500 - margin.top - margin.bottom,
+		dataset = [];
+
+		
 
 	var parse_time = d3.time.format.utc("%H:%M:%S").parse;
 
@@ -107,7 +135,7 @@ circle:hover {
 
 	var y = d3.scale.linear()
 				.range([height, 0])
-				.domain([15, 30]);
+				.domain([18, 24.5]);
 
 
 	var xAxis = d3.svg.axis()
@@ -136,7 +164,7 @@ circle:hover {
 
 	var line = d3.svg.line()
 				.interpolate('basis')
-				.x(function(d) { return x(parse_time(d.date)); })
+				.x(function(d) { return x(parse_time(d.reported_at)); })
 				.y(function(d) { return y(d.temperature); });
 	
 	svg.append('line')
@@ -144,33 +172,26 @@ circle:hover {
 		.attr('x1', 0)
 		.attr('y1', y(avg))
 		.attr('x2', width)
-		.attr('y2', y(avg));
-
-	svg.append("path")
-		.datum(dataset)
-		.attr("class", "line")
-		.attr("d", line);
-
-	svg.selectAll('circle')
-		.data(dataset)
-		.enter()
-		.append('circle')
-		.attr('cx', function(d) { return x(parse_time(d.date)); })
-		.attr('cy', function(d) { return y(d.temperature); })
-		.attr('r', '3')
-		.on('mouseover', function(d) {
-			displayInfo(this, d);	
-		})
-		.on('mouseout', function(d) { 
-			hideInfo();
-		});
+		.attr('y2', y(avg));	
 
 	svg.append("text")
 	  .attr('id', "avg_text")
       .attr("x", width + 10)
       .attr("y", y(avg))
       .attr("dy", ".35em")
-      .text((Math.round(avg*10)/10)+"°C");
+      .text((Math.round(avg * 10) / 10)+"°C");
+
+	svg.append("path")
+		.datum(dataset)
+		.attr("id", "report")
+		.attr("d", line);
+
+	setInterval(function() {
+		d3.json('report.php', function(err, obj) {
+			refresh(obj);
+		});
+	}, 60000);
+
 	</script>
 </body>
 </html>
