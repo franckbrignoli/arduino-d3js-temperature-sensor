@@ -19,6 +19,11 @@ body {
   stroke-width: 2.5px;
 }
 
+#report_avg {
+  fill: none;
+  stroke: red;
+  stroke-width: 2.5px;
+}
 circle {
 	fill: #315B7E;
 	stroke: black;
@@ -59,8 +64,20 @@ circle:hover {
 	<script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
 	<script type="text/javascript">
 	<?php
+	// TODO: fetch and refresh data for the average chart
+    // TODO: extract CSS + JS
+    // TODO: unique file to save or retrieve data
 
 	require('TemperatureTable.php');	
+	
+	echo "var dataset_avg = [";
+	$rows = TemperatureTable::getAverageReport(15);
+
+	foreach ($rows as $row) 
+	{
+		echo "{ reported_at : '".$row['reported_at']."', temperature : '".$row['temperature']."' },";
+	}
+	echo "];";
 
 	foreach (TemperatureTable::getTodayAverage() as $row) 
 	{
@@ -185,6 +202,27 @@ circle:hover {
 		.datum(dataset)
 		.attr("id", "report")
 		.attr("d", line);
+
+	svg.append("path")
+		.datum(dataset_avg)
+		.attr("id", "report_avg")
+		.attr("d", line);
+
+	svg.selectAll('circle')
+		.data(dataset)
+		.enter()
+		.append('circle')
+		.attr('cx', function(d) { return x(parse_time(d.reported_at)); })
+		.attr('cy', function(d) { return y(d.temperature); })
+		.attr('r', '3')
+		.on('mouseover', function(d) {
+			displayInfo(this, d);	
+		})
+		.on('mouseout', function(d) { 
+			hideInfo();
+		});
+
+
 
 	setInterval(function() {
 		d3.json('report.php', function(err, obj) {
